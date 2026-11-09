@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "launch-intelligence"
+version = "1.0.0"
+description = "Entertainment launch analytics: velocity, share of voice, benchmarks, anomaly episodes linked to campaign events, executive deck"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.optional-dependencies]
+postgres = ["psycopg[binary]>=3.1"]
+deck = ["python-pptx>=0.6.23"]
+
+[project.scripts]
+launch-intel = "launch_intel.cli:main"
+
+[tool.setuptools.package-data]
+launch_intel = ["schema.sql"]
