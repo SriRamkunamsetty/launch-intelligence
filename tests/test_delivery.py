@@ -96,7 +96,8 @@ class RealHttpTransport(unittest.TestCase):
 
 class Cli(unittest.TestCase):
     def test_demo_command_and_deck(self):
-        import contextlib, io
+        import contextlib
+        import io
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
             main(["demo"])

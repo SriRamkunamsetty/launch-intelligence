@@ -6,7 +6,7 @@ import re
 import sys
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import parse_qs, urlsplit
+from urllib.parse import urlsplit
 from .db import parse_ts
 from .metrics import anomalies, build_facts, cumulative_series, title_posts
 from .narrator import fmt, ignore_list, render, template_narrative, verify

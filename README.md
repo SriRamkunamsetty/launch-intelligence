@@ -37,17 +37,28 @@ The five slides produced by `deck`, rendered through LibreOffice: narrative, tra
 - **Engagement rate**, **share of voice** in a competitive set, and **genre percentile** (needs 3+ titles in the genre; the sample size is stated in the narrative).
 - **Anomaly episodes**: robust (MAD) detection on day-over-day growth. A spike and its rebound merge into *one* episode reported at its peak, with any **logged events** within 48h attached. Timing is reported as timing, never as proof of cause.
 - **Claim-checked narrative**: a deterministic write-up where every number comes from a fact and is checked to be on the right metric and window.
+- **AI/ML Trajectory Forecaster**: Bass Diffusion Model nonlinear curve fitting (`scipy.optimize.curve_fit`) projecting 30-day cumulative velocity, terminal audience reach, and 95% confidence intervals.
+- **Ensemble Anomaly Detector**: Scikit-learn Isolation Forest + Robust MAD Z-score + Bayesian change-point scoring.
+- **Aspect-Based Sentiment NLP**: Multi-aspect audience sentiment extraction (VFX/CGI, Cast, Music, Story, Hype) and automated spam/bot filtering.
+- **Agentic AI Analyst**: Pluggable LLM reasoning engine (Google Gemini, OpenAI, Claude, or offline heuristic) delivering causal impact attribution and grounded executive memos.
+- **Enterprise REST API**: Production FastAPI service with OpenAPI 3.1 (`/docs`), Pydantic v2 data contracts, and Redis caching.
+- **DevOps & Kubernetes**: Multi-stage production Dockerfile, Docker Compose full stack (Postgres, Redis, Prometheus, Grafana), production Helm v2 chart, and Kubernetes manifests (Deployment, HPA, Ingress, CronJob, ServiceMonitor).
 - **Executive deck** (`.pptx`, 5 slides) that refuses to build if its narrative fails verification.
 - **Collection**: YouTube Data API client with quota accounting and retry/backoff, validated CSV import (bad rows rejected *with reasons*), scheduled collector. SQLite for development; Postgres through `DATABASE_URL` (optional driver).
 
 ## Quick start
 
 ```bash
-pip install -e ".[deck]"            # add ,postgres for the Postgres driver
-launch-intel serve --demo                  # dashboard on http://127.0.0.1:8000 (synthetic data)
-launch-intel demo                          # the same report in the terminal
+pip install -e ".[all]"                     # install core + AI/ML + API + Postgres + Deck
+launch-intel serve --demo                  # lightweight dashboard on http://127.0.0.1:8000
+launch-intel api --demo                    # enterprise FastAPI with OpenAPI on http://127.0.0.1:8000/docs
+launch-intel predict --demo                # terminal Bass diffusion ML trajectory forecast
+launch-intel briefing --demo               # terminal agentic AI causal executive briefing
 launch-intel deck --demo --title "Iron Meridian" --out report.pptx
-python -m unittest discover -s tests -v
+python -m unittest discover -s tests -v    # runs all 30 core, delivery, and enterprise tests
+
+# Or run the full production stack via Docker Compose:
+docker compose up -d --build
 ```
 
 ## Using real data

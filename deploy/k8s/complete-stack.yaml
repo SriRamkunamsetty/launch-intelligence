@@ -1,0 +1,191 @@
+# ==============================================================================
+# Complete Production Kubernetes Manifest for Launch Intelligence
+# Namespace, ConfigMap, Secret, Deployment, Service, HPA, and Ingress
+# ==============================================================================
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: launch-intelligence
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: launch-intel-config
+  namespace: launch-intelligence
+data:
+  DATABASE_URL: "postgresql://launch_user:launch_pass@postgres-service:5432/launch_intel"
+  REDIS_URL: "redis://redis-service:6379/0"
+  LAUNCH_INTEL_DEMO: "0"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: launch-intel-secret
+  namespace: launch-intelligence
+type: Opaque
+stringData:
+  YOUTUBE_API_KEY: ""
+  GEMINI_API_KEY: ""
+  OPENAI_API_KEY: ""
+  ANTHROPIC_API_KEY: ""
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: launch-intel-api
+  namespace: launch-intelligence
+  labels:
+    app: launch-intel-api
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: launch-intel-api
+  template:
+    metadata:
+      labels:
+        app: launch-intel-api
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "8000"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+      containers:
+        - name: api
+          image: ghcr.io/sriramkunamsetty/launch-intelligence:1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+              name: http
+          envFrom:
+            - configMapRef:
+                name: launch-intel-config
+            - secretRef:
+                name: launch-intel-secret
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 2000m
+              memory: 2Gi
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: launch-intel-service
+  namespace: launch-intelligence
+  labels:
+    app: launch-intel-api
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 8000
+      protocol: TCP
+      name: http
+  selector:
+    app: launch-intel-api
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: launch-intel-hpa
+  namespace: launch-intelligence
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: launch-intel-api
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: launch-intel-ingress
+  namespace: launch-intelligence
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/proxy-body-size: "20m"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: launch-intel.company.internal
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: launch-intel-service
+                port:
+                  number: 80
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: launch-intel-collector
+  namespace: launch-intelligence
+spec:
+  schedule: "0 */6 * * *"
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: collector
+              image: ghcr.io/sriramkunamsetty/launch-intelligence:1.0.0
+              command: ["launch-intel", "collect", "--config", "/app/examples/titles.example.json"]
+              envFrom:
+                - configMapRef:
+                    name: launch-intel-config
+                - secretRef:
+                    name: launch-intel-secret
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 256Mi
+                limits:
+                  cpu: 500m
+                  memory: 512Mi

@@ -47,6 +47,10 @@ def build_parser():
     sub = p.add_subparsers(dest="cmd", required=True)
     sub.add_parser("demo", parents=[common], help="print a grounded launch report").add_argument("--title", default="Iron Meridian")
     w = sub.add_parser("serve", parents=[common], help="read-only dashboard"); w.add_argument("--host", default="127.0.0.1"); w.add_argument("--port", type=int, default=8000)
+    api_cmd = sub.add_parser("api", parents=[common], help="run enterprise FastAPI server with OpenAPI docs")
+    api_cmd.add_argument("--host", default="0.0.0.0"); api_cmd.add_argument("--port", type=int, default=8000); api_cmd.add_argument("--reload", action="store_true")
+    sub.add_parser("predict", parents=[common], help="run Bass diffusion ML trajectory forecast").add_argument("--title", default="Iron Meridian")
+    sub.add_parser("briefing", parents=[common], help="generate agentic AI executive briefing").add_argument("--title", default="Iron Meridian")
     d = sub.add_parser("deck", parents=[common], help="executive .pptx for a title"); d.add_argument("--title", required=True); d.add_argument("--out", default="launch_report.pptx")
     sub.add_parser("ingest-csv", parents=[common], help="post_id,title,platform,published_at,captured_at,views[,likes,comments,shares,kind,genre]").add_argument("path")
     sub.add_parser("import-events", parents=[common], help="title,occurred_at,kind,label").add_argument("path")
@@ -73,6 +77,45 @@ def _dispatch(a):
     elif a.cmd == "serve":
         from .web import serve
         serve(open_db(a), a.host, a.port)
+    elif a.cmd == "api":
+        import uvicorn
+        if a.demo:
+            os.environ["LAUNCH_INTEL_DEMO"] = "1"
+        if a.db:
+            os.environ["DATABASE_URL"] = a.db
+        uvicorn.run("launch_intel.api.app:app", host=a.host, port=a.port, reload=a.reload)
+    elif a.cmd == "predict":
+        from .ml.trajectory import MLTrajectoryForecaster
+        conn = open_db(a)
+        tid = _title_id(conn, a.title)
+        pred = MLTrajectoryForecaster().forecast_title(conn, tid, a.title)
+        print(f"\n=== ML Trajectory Forecast for '{a.title}' ===")
+        print(f"Model: {pred.model_name} (R^2 = {pred.r2_score})")
+        print(f"Current Observed: {pred.current_views:,.0f} views at +{pred.observed_hours:.0f}h\n")
+        print(f"  {'Milestone':<12} {'Predicted Views':>18} {'Lower (95%)':>16} {'Upper (95%)':>16}")
+        print(f"  {'-'*12} {'-'*18} {'-'*16} {'-'*16}")
+        for name, m in pred.milestones.items():
+            proj = " (projected)" if m["is_projected"] else " (observed)"
+            print(f"  {name:<12} {m['predicted']:>18,.0f} {m['lower']:>16,.0f} {m['upper']:>16,.0f}{proj}")
+        if pred.notes:
+            print("\nNotes:")
+            for n in pred.notes:
+                print(f"  - {n}")
+    elif a.cmd == "briefing":
+        from .ai.agent import AgenticLaunchAnalyst
+        conn = open_db(a)
+        tid = _title_id(conn, a.title)
+        analyst = AgenticLaunchAnalyst()
+        b = analyst.generate_briefing(conn, tid)
+        print(f"\n=== Strategic Executive Briefing: {b.title_name} ===")
+        print(f"Provider: {b.model_provider} | Claim Grounding Score: {b.groundedness_score*100:.1f}%\n")
+        print("Executive Summary:")
+        print(b.narrative, "\n")
+        print("Causal Inference:")
+        print(f"  {b.causal_analysis['causal_assessment']}\n")
+        print("Strategic Recommendations:")
+        for r in b.strategic_recommendations:
+            print(f"  * {r}")
     elif a.cmd == "deck":
         from .deck import build_deck
         conn = open_db(a); print("wrote", build_deck(conn, _title_id(conn, a.title), a.out))

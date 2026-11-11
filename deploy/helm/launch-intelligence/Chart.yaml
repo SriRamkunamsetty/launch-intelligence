@@ -1,0 +1,18 @@
+apiVersion: v2
+name: launch-intelligence
+description: Enterprise Entertainment Launch Analytics & AI Trajectory Forecasting Helm Chart
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - analytics
+  - aiml
+  - entertainment
+  - trajectory-forecasting
+  - social-media
+home: https://github.com/SriRamkunamsetty/launch-intelligence
+sources:
+  - https://github.com/SriRamkunamsetty/launch-intelligence
+maintainers:
+  - name: SriRamKunamsetty
+    email: mohansriramkunamsetty@gmail.com

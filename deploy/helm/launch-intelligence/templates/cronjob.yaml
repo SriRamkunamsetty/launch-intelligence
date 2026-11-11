@@ -1,0 +1,34 @@
+{{- if .Values.cronjob.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "launch-intelligence.fullname" . }}-collector
+  labels:
+    {{- include "launch-intelligence.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.cronjob.schedule | quote }}
+  successfulJobsHistoryLimit: {{ .Values.cronjob.successfulJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ .Values.cronjob.failedJobsHistoryLimit }}
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            {{- include "launch-intelligence.selectorLabels" . | nindent 12 }}
+            role: collector-cron
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: collector
+              image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              command: ["launch-intel", "collect", "--config", "/app/examples/titles.example.json"]
+              envFrom:
+                - configMapRef:
+                    name: {{ include "launch-intelligence.fullname" . }}-config
+                - secretRef:
+                    name: {{ include "launch-intelligence.fullname" . }}-secret
+              resources:
+                {{- toYaml .Values.cronjob.resources | nindent 16 }}
+{{- end }}

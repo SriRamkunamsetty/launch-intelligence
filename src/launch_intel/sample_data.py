@@ -4,7 +4,7 @@ import math
 import random
 from datetime import datetime, timedelta, timezone
 
-from .db import get_or_create_title, insert_id, iso
+from .db import get_or_create_title, iso
 from .ingest import store_row
 
 TITLES = [("Iron Meridian", "action"), ("Steel Tide", "action"), ("Last Bastion", "action"), ("Zero Hour Protocol", "action"),

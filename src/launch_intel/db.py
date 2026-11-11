@@ -1,7 +1,6 @@
 """Database layer. SQLite for dev/tests, Postgres for production (optional `psycopg`).
 All SQL in the package is written once, with `?` placeholders and ON CONFLICT upserts, and
 translated for Postgres by PgConn. Postgres support is NOT exercised by the test suite here."""
-import re
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
